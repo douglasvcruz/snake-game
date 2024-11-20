@@ -8,6 +8,9 @@ type UseSnakeMovementProps = {
   lastKeyPressed: MutableRefObject<keyof typeof valueSnakeDirectionStrategy>;
   deltaTracker: MutableRefObject<number>;
   snakeSpeed: MutableRefObject<number>;
+  modeRef: MutableRefObject<string>;
+  isGameActiveRef: MutableRefObject<boolean>;
+  setScore: React.Dispatch<React.SetStateAction<number>>;
 };
 
 const nextValueAfterCollision = {
@@ -21,6 +24,9 @@ export function useSnakeMovement({
   lastKeyPressed,
   deltaTracker,
   snakeSpeed,
+  modeRef,
+  isGameActiveRef,
+  setScore,
 }: UseSnakeMovementProps) {
   const { appleRef, setNewApple } = useContext(AppleContext);
   const { setSnake } = useContext(SnakeContext);
@@ -48,11 +54,26 @@ export function useSnakeMovement({
   };
 
   const moveSnakeUp = () => {
+    console.log(isGameActiveRef.current);
     if (lastKeyPressed.current === "down") {
       return;
     }
     lastKeyPressed.current = "up";
   };
+
+  const startSnakeMovementInfinite = (
+    prevSnake: number[],
+    nextSnakePixel: number,
+    direction: keyof typeof valueSnakeDirectionStrategy
+  ) => {
+    const nextSnakePixelAfterCollision =
+      nextSnakePixel + nextValueAfterCollision[direction];
+    return [...prevSnake.slice(1), nextSnakePixelAfterCollision];
+  };
+
+  const startSnakeMovementNormal = (
+    direction: keyof typeof valueSnakeDirectionStrategy
+  ) => {};
 
   const startSnakeMovement = (
     direction: keyof typeof valueSnakeDirectionStrategy
@@ -60,19 +81,31 @@ export function useSnakeMovement({
     setSnake((prevSnake) => {
       const newSnake = [...prevSnake];
       const hasEatenApple = verifySnakeEatenApple(prevSnake);
+
       if (hasEatenApple) {
         newSnake.unshift(newSnake[0]);
+        setScore((prevScore) => prevScore + 1);
         setNewApple();
       }
       const nextSnakePixel = getNextSnakePixel(prevSnake, direction);
+      if (
+        checkSnakeCollision(nextSnakePixel, direction) &&
+        modeRef.current === "INFINITE"
+      ) {
+        return startSnakeMovementInfinite(prevSnake, nextSnakePixel, direction);
+      }
+
+      if (
+        checkSnakeCollision(nextSnakePixel, direction) &&
+        modeRef.current === "NORMAL"
+      ) {
+        isGameActiveRef.current = false;
+        lastKeyPressed.current = "right";
+        return [...newSnake];
+      }
+
       return [...newSnake.slice(1), nextSnakePixel];
     });
-  };
-
-  const verifySnakeEatenApple = (newSnake: number[]) => {
-    const snakeLastElement = getSnakeLastElement(newSnake);
-    const hasEatenApple = snakeLastElement === appleRef.current;
-    return hasEatenApple;
   };
 
   const getNextSnakePixel = (
@@ -82,14 +115,13 @@ export function useSnakeMovement({
     const snakeLastElement = getSnakeLastElement(newSnake);
     const directionOffset = valueSnakeDirectionStrategy[direction];
     const nextSnakePixel = snakeLastElement + directionOffset;
-
-    if (checkSnakeCollision(nextSnakePixel, direction)) {
-      const nextSnakePixelAfterCollision =
-        nextSnakePixel + nextValueAfterCollision[direction];
-      return nextSnakePixelAfterCollision;
-    }
-
     return nextSnakePixel;
+  };
+
+  const verifySnakeEatenApple = (newSnake: number[]) => {
+    const snakeLastElement = getSnakeLastElement(newSnake);
+    const hasEatenApple = snakeLastElement === appleRef.current;
+    return hasEatenApple;
   };
 
   const getSnakeLastElement = (newSnake: number[]) => {
@@ -103,7 +135,9 @@ export function useSnakeMovement({
   };
 
   const snakeMovesByDirection = (key: string) => {
+    if (!isGameActiveRef.current) return;
     const hasAnimationInProgress = deltaTracker.current < snakeSpeed.current;
+
     if (hasAnimationInProgress) {
       return;
     }

@@ -1,11 +1,16 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect } from "react";
 
 import { useSnakeMovement } from "./hooks/useSnakeMovement";
 import { startSnakeSpeed } from "./hooks/startSnakeSpeed";
 import { valueSnakeDirectionStrategy } from "../../constants";
 
-export function StartSnakeGame() {
-  const [isGameActive, setIsGameActive] = useState(true);
+type StartSnakeGameProps = {
+  modeRef: React.MutableRefObject<string>;
+  setScore: React.Dispatch<React.SetStateAction<number>>;
+};
+
+export function StartSnakeGame({ modeRef, setScore }: StartSnakeGameProps) {
+  const isGameActiveRef = useRef(true);
   const lastTime = useRef(0);
 
   const lastKeyPressed =
@@ -17,6 +22,9 @@ export function StartSnakeGame() {
     lastKeyPressed,
     deltaTracker,
     snakeSpeed,
+    modeRef,
+    isGameActiveRef,
+    setScore,
   });
 
   startSnakeSpeed({ snakeSpeed });
@@ -30,7 +38,7 @@ export function StartSnakeGame() {
       lastTime.current = timestamp;
     }
 
-    if (isGameActive) {
+    if (isGameActiveRef.current) {
       requestAnimationFrame(updateGame);
     }
   };
@@ -40,5 +48,5 @@ export function StartSnakeGame() {
     requestAnimationFrame(updateGame);
   }, []);
 
-  return { isGameActive, setIsGameActive };
+  return { isGameActiveRef, updateGame, addSnakeEventListener };
 }

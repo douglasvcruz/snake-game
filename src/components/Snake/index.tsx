@@ -1,3 +1,5 @@
-export default function Snake() {
-  return <div className="box-snake"></div>;
+import DefaultPixel from "../DefaultPixel";
+
+export default function Snake({ key }: { key: number }) {
+  return <DefaultPixel key={key} className="box-snake" />;
 }
